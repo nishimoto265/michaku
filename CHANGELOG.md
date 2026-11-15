@@ -20,6 +20,8 @@ First public release.
 
 ### Known limitations
 
+- Linux and macOS only (the ledger's file locking is Unix flock; a Windows
+  port is future work)
 - Single machine, single operator; no multi-machine sync or server mode
 - No custom rule language; the five rules are fixed types with TOML
   parameters

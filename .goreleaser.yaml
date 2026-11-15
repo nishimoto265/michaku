@@ -15,7 +15,6 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
@@ -29,10 +28,6 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
-    format_overrides:
-      - goos: windows
-        formats:
-          - zip
 
 checksum:
   name_template: checksums.txt
@@ -65,6 +60,8 @@ release:
 
     **Known limitations (v0.1)**
 
+    - Linux and macOS only (the ledger's file locking is Unix flock; a
+      Windows port is future work).
     - Single machine, single operator. No multi-machine sync, no server mode.
     - Detection is five fixed rule types with TOML parameters; there is no
       custom rule language yet.
