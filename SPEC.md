@@ -39,7 +39,7 @@ regenerates it from the JSONL at any time. If they disagree, the JSONL wins.
 | `activity.seen` | Generic "activity observed" from a follow adapter | `source`, `ref` |
 | `schedule.declared` | Expected schedule declared | `expr` (cron, or one-shot `runonce@<RFC3339>`; a timestamp without an offset is read in the local timezone) or `every` (interval), `grace` (duration string) or `grace_sec` (numeric seconds, alias used only when `grace` is absent), `enabled` (optional; `false` excludes the schedule from detection) |
 | `run.started` | A run started | `job` |
-| `run.finished` | A run finished | `status` (`ok`/`failed`), `exit_code`, `duration_ms`, `output_tail` (optional) |
+| `run.finished` | A run finished | `status` (`ok`/`failed`), `exit_code`, `duration_ms`, `output_tail` (optional), `partial` (optional; `true` = completed but incomplete — the digest marks it “partial: completed but incomplete”), `sites_incomplete` (optional list of unfinished items, e.g. sites; generic alias `incomplete`), `note` (optional) |
 | `delegation.created` | A delegation occurred | `to`, `task`, `due` (report deadline) |
 | `delegation.reported` | A report/handover arrived | `outcome` (`completed`/`failed`/`partial`), `ref` |
 | `delegation.cancelled` | A delegation was cancelled/expired | `reason` |
