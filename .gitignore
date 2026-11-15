@@ -1,0 +1,5 @@
+/opsledger
+*.db
+ledger.jsonl
+*.offset.json
+alerts.log

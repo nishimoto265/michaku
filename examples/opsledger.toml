@@ -1,0 +1,54 @@
+# Synthetic example configuration — no real data.
+ledger_path = "ledger.jsonl"
+db_path = "ledger.db"
+capture_output_tail = false
+output_tail_lines = 20
+
+[[follow]]
+name = "app-json-log"
+path = "app.log"
+adapter = "json"
+mapping = { type = "event", actor = "actor", subject = "job" }
+exclude_fields = ["secret", "token"]
+
+[[schedules]]
+subject = "job:daily-report"
+expr = "20 9 * * *"
+grace = "10m"
+
+[rules.missing_run]
+enabled = true
+grace = "5m"
+max_duration = "2h"
+reminder = "1h"
+
+[rules.report_missing]
+enabled = true
+grace = "0s"
+critical_after = "24h"
+reminder = "6h"
+
+[rules.approval_stale]
+enabled = true
+threshold = "24h"
+reminder = "24h"
+
+[rules.heartbeat_stale]
+enabled = true
+threshold = "1h"
+reminder = "1h"
+
+[rules.repeated_failure]
+enabled = true
+window = "24h"
+count = 3
+reminder = "6h"
+
+[[notify]]
+type = "file"
+path = "alerts.log"
+
+# [[notify]]
+# type = "webhook"
+# url = "https://ntfy.example.com/opsledger-alerts"
+# format = "ntfy"   # generic | slack | discord | ntfy

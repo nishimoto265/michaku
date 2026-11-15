@@ -1,0 +1,28 @@
+# Follow presets (synthetic examples). Copy a [[follow]] block into opsledger.toml.
+# follow is READ-ONLY: target logs are opened O_RDONLY, never modified.
+
+# Preset 1: JSON-lines application log
+# Log line: {"event":"actor.heartbeat","actor":"agent:x","job":"job:y","secret":"..."}
+[[follow]]
+name = "json-app"
+path = "/var/log/example/app.jsonl"
+adapter = "json"
+mapping = { type = "event", actor = "actor", subject = "job" }
+exclude_fields = ["secret", "token", "password"]
+
+# Preset 2: plain cron-style log via regex named groups
+# Log line: agent:x heartbeat job:y
+[[follow]]
+name = "plain-cron"
+path = "/var/log/example/cron.log"
+adapter = "regex"
+pattern = '^(?P<actor>\S+) heartbeat (?P<subject>\S+)$'
+exclude_fields = []
+
+# Preset 3: generic activity — any line becomes activity.seen for a fixed actor
+[[follow]]
+name = "generic-activity"
+path = "/var/log/example/activity.log"
+adapter = "json"
+mapping = { actor = "=agent:legacy-system" }
+exclude_fields = []
