@@ -2,6 +2,7 @@ package detect
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -17,6 +18,24 @@ type Candidate struct {
 	Subject  string
 	Severity string // warn | critical
 	Detail   string
+}
+
+// parseRunonce parses a one-shot schedule expression of the form
+// runonce@<RFC3339> (e.g. runonce@2026-11-16T08:00:00+09:00). A timestamp
+// without a timezone offset is interpreted in the local timezone, matching
+// how cron expressions are interpreted.
+func parseRunonce(expr string) (time.Time, bool) {
+	rest, ok := strings.CutPrefix(expr, "runonce@")
+	if !ok || rest == "" {
+		return time.Time{}, false
+	}
+	if t, err := time.Parse(time.RFC3339, rest); err == nil {
+		return t, true
+	}
+	if t, err := time.ParseInLocation("2006-01-02T15:04:05", rest, time.Local); err == nil {
+		return t, true
+	}
+	return time.Time{}, false
 }
 
 // prevCron returns the latest scheduled time <= now within lookback.
@@ -58,7 +77,7 @@ func Evaluate(st *store.State, cfg *config.Config, now time.Time) []Candidate {
 	for _, s := range cfg.Schedules {
 		if _, ok := schedules[s.Subject]; !ok {
 			grace, _ := time.ParseDuration(s.Grace)
-			schedules[s.Subject] = &store.Schedule{Subject: s.Subject, Expr: s.Expr, Every: s.Every, Grace: grace, Declared: now.Add(-24 * time.Hour)}
+			schedules[s.Subject] = &store.Schedule{Subject: s.Subject, Expr: s.Expr, Every: s.Every, Grace: grace, Declared: now.Add(-24 * time.Hour), Enabled: true}
 		}
 	}
 
@@ -67,11 +86,22 @@ func Evaluate(st *store.State, cfg *config.Config, now time.Time) []Candidate {
 		graceDef := r.Dur("grace", 5*time.Minute)
 		maxDur := r.Dur("max_duration", 2*time.Hour)
 		for _, sc := range schedules {
+			if !sc.Enabled {
+				continue
+			}
 			grace := sc.Grace
 			if grace == 0 {
 				grace = graceDef
 			}
-			if sc.Expr != "" {
+			if expected, isRunonce := parseRunonce(sc.Expr); isRunonce {
+				if now.Sub(expected) <= grace {
+					continue
+				}
+				last, has := st.LastRun[sc.Subject]
+				if !has || last.Before(expected) {
+					out = append(out, Candidate{Key: "run.missing|" + sc.Subject + "|" + expected.Format(time.RFC3339), Rule: "run.missing", Kind: "missing_run", Subject: sc.Subject, Severity: "warn", Detail: fmt.Sprintf("expected one-shot run at %s, none recorded (grace %s)", expected.Format(time.RFC3339), grace)})
+				}
+			} else if sc.Expr != "" {
 				expected, ok := prevCron(sc.Expr, now, 8*24*time.Hour)
 				if !ok {
 					continue
@@ -138,10 +168,15 @@ func Evaluate(st *store.State, cfg *config.Config, now time.Time) []Candidate {
 		}
 	}
 
-	// heartbeat_stale
+	// heartbeat_stale: only actors with a heartbeat expectation are
+	// tracked — those that registered or emitted a heartbeat (SPEC §3.5).
+	// Actors that merely appear on other events never fire here.
 	if r := cfg.Rule("heartbeat_stale"); r.Enabled {
 		thr := r.Dur("threshold", time.Hour)
 		for actor, last := range st.Actors {
+			if !st.TrackedActors[actor] {
+				continue
+			}
 			if now.Sub(last) > thr {
 				out = append(out, Candidate{Key: "actor.silent|" + actor + "|" + last.Format(time.RFC3339), Rule: "actor.silent", Kind: "heartbeat_stale", Subject: actor, Severity: "warn", Detail: fmt.Sprintf("actor %s last seen %s (threshold %s)", actor, last.Format(time.RFC3339), thr)})
 			}

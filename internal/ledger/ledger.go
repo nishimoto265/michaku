@@ -63,6 +63,20 @@ func (e Event) DataString(k string) string {
 	}
 	return ""
 }
+func (e Event) DataBool(k string) (bool, bool) {
+	m := e.DataMap()
+	if v, ok := m[k].(bool); ok {
+		return v, true
+	}
+	return false, false
+}
+func (e Event) DataNumber(k string) (float64, bool) {
+	m := e.DataMap()
+	if v, ok := m[k].(float64); ok {
+		return v, true
+	}
+	return 0, false
+}
 func (e Event) DataTime(k string) (time.Time, bool) {
 	s := e.DataString(k)
 	if s == "" {

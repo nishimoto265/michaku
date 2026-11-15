@@ -34,6 +34,9 @@ type Schedule struct {
 	Subject, Expr, Every string
 	Grace                time.Duration
 	Declared             time.Time
+	// Enabled is false only when schedule.declared carried enabled:false;
+	// a disabled schedule is excluded from missing_run detection.
+	Enabled bool
 }
 type FinishedRun struct {
 	Subject, Status string
@@ -41,22 +44,28 @@ type FinishedRun struct {
 }
 
 type State struct {
-	Actors       map[string]time.Time
-	ActorKind    map[string]string
-	Delegations  map[string]*Delegation // open only, key = corr or event id
-	Approvals    map[string]*Approval
-	Findings     map[string]*Finding
-	OpenRuns     map[string]*RunInfo // key = corr
-	LastRun      map[string]time.Time
-	LastFinished map[string]FinishedRun
-	Finished     []FinishedRun
-	Schedules    map[string]*Schedule
-	Events       []ledger.Event
+	// Actors holds the last-seen time of tracked actors only (see
+	// TrackedActors). Appearances of untracked actors are not recorded here.
+	Actors map[string]time.Time
+	// TrackedActors is the set of actors with a heartbeat expectation:
+	// those that emitted actor.registered or actor.heartbeat. Only they
+	// are subject to heartbeat_stale detection.
+	TrackedActors map[string]bool
+	ActorKind     map[string]string
+	Delegations   map[string]*Delegation // open only, key = corr or event id
+	Approvals     map[string]*Approval
+	Findings      map[string]*Finding
+	OpenRuns      map[string]*RunInfo // key = corr
+	LastRun       map[string]time.Time
+	LastFinished  map[string]FinishedRun
+	Finished      []FinishedRun
+	Schedules     map[string]*Schedule
+	Events        []ledger.Event
 }
 
 func NewState() *State {
 	return &State{
-		Actors: map[string]time.Time{}, ActorKind: map[string]string{},
+		Actors: map[string]time.Time{}, TrackedActors: map[string]bool{}, ActorKind: map[string]string{},
 		Delegations: map[string]*Delegation{}, Approvals: map[string]*Approval{},
 		Findings: map[string]*Finding{}, OpenRuns: map[string]*RunInfo{},
 		LastRun: map[string]time.Time{}, LastFinished: map[string]FinishedRun{},
@@ -73,9 +82,26 @@ func keyOf(e ledger.Event) string {
 
 func (s *State) Apply(e ledger.Event) {
 	s.Events = append(s.Events, e)
+	// Heartbeat expectation (SPEC §3.5): only actor.registered and
+	// actor.heartbeat create a tracked actor. Merely appearing as the
+	// actor of any other event (run.*, schedule.declared, approval.*,
+	// finding.* written by the checker itself, …) never does.
 	if e.Actor != "" {
-		if t, ok := s.Actors[e.Actor]; !ok || e.TS.After(t) {
-			s.Actors[e.Actor] = e.TS
+		if e.Type == "actor.registered" || e.Type == "actor.heartbeat" {
+			s.TrackedActors[e.Actor] = true
+		}
+		if dataActor := e.DataString("actor"); dataActor != "" && e.Type == "actor.heartbeat" {
+			s.TrackedActors[dataActor] = true
+		}
+	}
+	// Last-seen is maintained for tracked actors only; any event by a
+	// tracked actor (heartbeat, activity.seen, runs, …) refreshes it.
+	if e.Actor != "" && s.TrackedActors[e.Actor] {
+		s.Actors[e.Actor] = maxTime(s.Actors[e.Actor], e.TS)
+	}
+	if (e.Type == "actor.heartbeat" || e.Type == "activity.seen") && e.DataString("actor") != "" {
+		if subj := e.DataString("actor"); s.TrackedActors[subj] {
+			s.Actors[subj] = maxTime(s.Actors[subj], e.TS)
 		}
 	}
 	switch e.Type {
@@ -83,22 +109,28 @@ func (s *State) Apply(e ledger.Event) {
 		if k := e.DataString("kind"); k != "" && e.Actor != "" {
 			s.ActorKind[e.Actor] = k
 		}
-	case "actor.heartbeat", "activity.seen":
-		// already covered by Actors update; heartbeat also counts for actor field
-		if e.Actor != "" {
-			s.Actors[e.Actor] = maxTime(s.Actors[e.Actor], e.TS)
-		}
-		if subj := e.DataString("actor"); subj != "" {
-			s.Actors[subj] = maxTime(s.Actors[subj], e.TS)
-		}
 	case "schedule.declared":
 		subj := e.Subject
 		if subj == "" {
 			subj = e.DataString("subject")
 		}
 		if subj != "" {
-			grace, _ := time.ParseDuration(e.DataString("grace"))
-			s.Schedules[subj] = &Schedule{Subject: subj, Expr: e.DataString("expr"), Every: e.DataString("every"), Grace: grace, Declared: e.TS}
+			// grace (duration string) takes precedence; grace_sec
+			// (numeric seconds) is accepted as an alias when grace
+			// is absent or unparseable.
+			grace, err := time.ParseDuration(e.DataString("grace"))
+			if err != nil {
+				if sec, ok := e.DataNumber("grace_sec"); ok {
+					grace = time.Duration(sec * float64(time.Second))
+				} else {
+					grace = 0
+				}
+			}
+			enabled := true
+			if v, ok := e.DataBool("enabled"); ok {
+				enabled = v
+			}
+			s.Schedules[subj] = &Schedule{Subject: subj, Expr: e.DataString("expr"), Every: e.DataString("every"), Grace: grace, Declared: e.TS, Enabled: enabled}
 		}
 	case "run.started":
 		s.OpenRuns[keyOf(e)] = &RunInfo{Subject: e.Subject, Started: e.TS}

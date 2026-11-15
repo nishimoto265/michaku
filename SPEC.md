@@ -37,7 +37,7 @@ regenerates it from the JSONL at any time. If they disagree, the JSONL wins.
 | `actor.registered` | An agent/process registers | `kind` (`personal-agent`/`cron-job`/`subagent`/…), `host`, `runtime` |
 | `actor.heartbeat` | Heartbeat: alive and active | `note` (optional) |
 | `activity.seen` | Generic "activity observed" from a follow adapter | `source`, `ref` |
-| `schedule.declared` | Expected schedule declared | `expr` (cron) or `every` (interval), `grace` |
+| `schedule.declared` | Expected schedule declared | `expr` (cron, or one-shot `runonce@<RFC3339>`; a timestamp without an offset is read in the local timezone) or `every` (interval), `grace` (duration string) or `grace_sec` (numeric seconds, alias used only when `grace` is absent), `enabled` (optional; `false` excludes the schedule from detection) |
 | `run.started` | A run started | `job` |
 | `run.finished` | A run finished | `status` (`ok`/`failed`), `exit_code`, `duration_ms`, `output_tail` (optional) |
 | `delegation.created` | A delegation occurred | `to`, `task`, `due` (report deadline) |
@@ -55,6 +55,9 @@ regenerates it from the JSONL at any time. If they disagree, the JSONL wins.
 run.started ──► run.finished          (closed)
 run.started ──► (no finished past max_duration) ──► finding: run.overdue
 schedule.declared + no run past expected time + grace ──► finding: run.missing
+schedule.declared with expr runonce@<time> is a one-shot schedule: it is
+judged once, at that time + grace; a run at or after that time resolves it.
+schedule.declared with data enabled=false is not a detection target at all.
 ```
 
 ### 3.2 Delegation
@@ -81,19 +84,28 @@ Episode identity is `rule + subject + episode reference` (the `finding_key`).
 An already-open finding with the same rule+subject suppresses duplicates.
 
 ### 3.5 Actor
+Only actors with a heartbeat expectation are tracked. An actor becomes
+tracked by emitting `actor.registered` or `actor.heartbeat`; nothing else
+creates an expectation.
 ```
-actor.registered / actor.heartbeat / activity.seen ──► last-seen updated
-last-seen older than threshold ──► finding: actor.silent
+actor.registered / actor.heartbeat ──► actor becomes tracked, last-seen updated
+(tracked actor) any later event, incl. activity.seen ──► last-seen updated
+(untracked actor) appearing as actor of any other event ──► not tracked,
+     no last-seen recorded, never a heartbeat_stale target
+tracked actor's last-seen older than threshold ──► finding: actor.silent
 ```
+In particular, the checker's own `finding.*` events (actor
+`opsledger:check`) and actors that only declare schedules, execute runs,
+or request approvals are untracked and must not raise `actor.silent`.
 
 ## 4. Detection rules (fixed 5 types)
 
 | rule type | condition | finding |
 |---|---|---|
-| `missing_run` | schedule (cron/`every`) + grace passed with no run; or a started run exceeds `max_duration` | `run.missing` / `run.overdue` |
+| `missing_run` | schedule (cron/`every`/`runonce@<time>`) + grace passed with no run; or a started run exceeds `max_duration`. Schedules declared with `enabled: false` are excluded | `run.missing` / `run.overdue` |
 | `report_missing` | `delegation.created` passes `due` with no report; severity rises by age band | `delegation.unreported` |
 | `approval_stale` | `approval.requested` unresolved past `threshold` | `approval.pending_stale` |
-| `heartbeat_stale` | actor's last heartbeat/`activity.seen` older than `threshold` | `actor.silent` |
+| `heartbeat_stale` | tracked actor's (registered or heartbeat-emitting, §3.5) last heartbeat/`activity.seen` older than `threshold` | `actor.silent` |
 | `repeated_failure` | ≥ N `run.finished` with `status=failed` for one subject within `window` | `run.flapping` |
 
 Every rule requires grace/threshold parameters — no rule fires on raw
