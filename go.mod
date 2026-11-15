@@ -1,4 +1,4 @@
-module github.com/nishimoto265/opsledger
+module github.com/nishimoto265/michaku
 
 go 1.23
 

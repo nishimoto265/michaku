@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nishimoto265/opsledger/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/ledger"
 )
 
 func writeCfg(t *testing.T, ledgerPath string) string {
 	t.Helper()
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "opsledger.toml")
+	cfgPath := filepath.Join(dir, "michaku.toml")
 	content := "ledger_path = \"" + ledgerPath + "\"\ndb_path = \"" + filepath.Join(dir, "ledger.db") + "\"\n"
 	if err := os.WriteFile(cfgPath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)

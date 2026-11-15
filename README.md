@@ -1,4 +1,4 @@
-# opsledger
+# michaku
 
 An append-only **operations ledger** for people who run personal agents and
 cron jobs on their own machines — plus silence detection on top of it:
@@ -12,34 +12,34 @@ quietly stopped running.
 > log following the *environment* runs against logs that already exist, and
 > `emit` commands the *operator* (or operator-side scripts) issue.
 > Detection is likewise run by the environment — your own cron/timer runs
-> `opsledger check`. Findings go to humans, never back to the agent.
+> `michaku check`. Findings go to humans, never back to the agent.
 
 ## Install in 5 minutes: one binary + one cron line
 
 ```sh
 # 1. Put the single static binary somewhere on PATH (or `go install` it)
-go install github.com/nishimoto265/opsledger@latest   # or download a release binary
+go install github.com/nishimoto265/michaku@latest   # or download a release binary
 
 # 2. Create a config (ledger paths, rules, notifications — all optional defaults)
-opsledger init
+michaku init
 
 # 3. Wrap your first job — that is the whole integration
 #    Before:  20 9 * * *  /home/you/bin/daily.sh
 #    After:
-20 9 * * *  opsledger run --job daily --schedule "20 9 * * *" -- /home/you/bin/daily.sh
+20 9 * * *  michaku run --job daily --schedule "20 9 * * *" -- /home/you/bin/daily.sh
 
 # 4. Let the environment check for silence (add one more cron line)
-*/15 * * * *  opsledger check
+*/15 * * * *  michaku check
 
 # 5. Read the morning digest
-opsledger digest --since 24h
+michaku digest --since 24h
 ```
 
 The wrapper records `schedule.declared`, `run.started`, and `run.finished`
 (exit code, duration) and **returns the job's exit code unchanged — even if
 recording itself fails** (see "Never impedes" below). Prefer not to wrap?
 Use the ping pair from inside your existing job script instead:
-`opsledger start daily` … `opsledger finish daily --status ok`
+`michaku start daily` … `michaku finish daily --status ok`
 (both are best-effort and never fail your job).
 
 ## What it detects (fixed 5 rules, all with grace/threshold)
@@ -61,11 +61,11 @@ new critical finding) so your existing cron mail can carry it.
 ## Recording paths (all environment/operator-side)
 
 1. **Wrapper / ping pair** — `run`, `start`, `finish` (above).
-2. **Log following** — `opsledger follow` tails existing logs read-only and
+2. **Log following** — `michaku follow` tails existing logs read-only and
    converts lines to events via a JSON key mapping or a regex with named
    groups. Offsets persist across restarts and rotation; fields can be
    excluded (e.g. secrets) at the mapping. See `examples/follow-presets.toml`.
-3. **Operator emit** — `opsledger emit <type> …` plus sugar for operator-side
+3. **Operator emit** — `michaku emit <type> …` plus sugar for operator-side
    scripts: `heartbeat`, `delegate`, `report`, `approve-request`,
    `approve-resolve`. This is for the operator's tooling, not code you add
    to an agent.

@@ -50,5 +50,5 @@ path = "alerts.log"
 
 # [[notify]]
 # type = "webhook"
-# url = "https://ntfy.example.com/opsledger-alerts"
+# url = "https://ntfy.example.com/michaku-alerts"
 # format = "ntfy"   # generic | slack | discord | ntfy

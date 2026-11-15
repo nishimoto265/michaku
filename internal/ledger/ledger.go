@@ -133,7 +133,7 @@ func Append(path string, e Event) error {
 func AppendBestEffort(path string, e Event, warn func(string)) {
 	if err := Append(path, e); err != nil {
 		if warn != nil {
-			warn(fmt.Sprintf("opsledger: warning: failed to record %s: %v", e.Type, err))
+			warn(fmt.Sprintf("michaku: warning: failed to record %s: %v", e.Type, err))
 		}
 	}
 }

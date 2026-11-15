@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/ledger"
-	"github.com/nishimoto265/opsledger/internal/store"
+	"github.com/nishimoto265/michaku/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/store"
 )
 
 // CompletedItem is the structured, machine-readable form of one entry in
@@ -221,7 +221,7 @@ func section(b *strings.Builder, title string, items []string) {
 
 func (r Report) Markdown() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("# opsledger digest\n\nPeriod: %s – %s\n\n", r.Since.Format(time.RFC3339), r.Until.Format(time.RFC3339)))
+	b.WriteString(fmt.Sprintf("# michaku digest\n\nPeriod: %s – %s\n\n", r.Since.Format(time.RFC3339), r.Until.Format(time.RFC3339)))
 	b.WriteString("## Summary\n\n")
 	b.WriteString(fmt.Sprintf("- Events in ledger: %d types tracked\n- Open findings: %d\n- Completed items in period: %d\n\n", len(r.Summary), r.OpenFinding, len(r.Completed)))
 	section(&b, "Completed", r.Completed)

@@ -1,4 +1,4 @@
-/opsledger
+/michaku
 *.db
 ledger.jsonl
 *.offset.json

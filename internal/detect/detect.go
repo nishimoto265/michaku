@@ -7,8 +7,8 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/nishimoto265/opsledger/internal/config"
-	"github.com/nishimoto265/opsledger/internal/store"
+	"github.com/nishimoto265/michaku/internal/config"
+	"github.com/nishimoto265/michaku/internal/store"
 )
 
 type Candidate struct {

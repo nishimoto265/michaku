@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/config"
+	"github.com/nishimoto265/michaku/internal/config"
 )
 
 type Message struct {
@@ -68,7 +68,7 @@ func sendWebhook(t config.NotifyTarget, msg Message, client *http.Client) error 
 		body = []byte(msg.Body)
 		contentType = "text/plain"
 		headers["Title"] = msg.Title
-		headers["Tags"] = "opsledger"
+		headers["Tags"] = "michaku"
 	default: // generic
 		body, _ = json.Marshal(map[string]any{"title": msg.Title, "body": msg.Body, "kind": msg.Kind, "ts": time.Now().Format(time.RFC3339)})
 	}

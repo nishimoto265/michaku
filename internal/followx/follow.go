@@ -13,8 +13,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/nishimoto265/opsledger/internal/config"
-	"github.com/nishimoto265/opsledger/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/config"
+	"github.com/nishimoto265/michaku/internal/ledger"
 )
 
 // TransformJSON maps a JSON log line to an event using mapping:
@@ -144,7 +144,7 @@ func inodeOf(fi os.FileInfo) uint64 {
 func ProcessNew(t config.FollowTarget, appendFn func(ledger.Event) error) (int, error) {
 	offsetFile := t.OffsetFile
 	if offsetFile == "" {
-		offsetFile = t.Path + ".opsledger-offset.json"
+		offsetFile = t.Path + ".michaku-offset.json"
 	}
 	st := loadOffset(offsetFile)
 	// READ-ONLY open: O_RDONLY only. Never O_WRONLY/O_CREATE/O_TRUNC on target.

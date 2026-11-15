@@ -132,7 +132,7 @@ func (c *Config) Rule(name string) Rule {
 	return Rule{Enabled: true}
 }
 
-const Template = `# opsledger configuration
+const Template = `# michaku configuration
 ledger_path = "ledger.jsonl"
 db_path = "ledger.db"
 capture_output_tail = false

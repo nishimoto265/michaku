@@ -1,6 +1,6 @@
-# opsledger SPEC v0.1
+# michaku SPEC v0.1
 
-This document is the normative specification of the opsledger event model.
+This document is the normative specification of the michaku event model.
 The ledger is the spec's asset: tools may be replaced, the vocabulary and
 lifecycles below are meant to be adopted as-is.
 
@@ -27,7 +27,7 @@ The source of truth is an append-only JSONL file: one event per line.
 | `data` | Type-specific payload (§2). |
 
 Appends are atomic: an exclusive `flock` plus a single-line write.
-The SQLite database is a *derived* projection only; `opsledger rebuild`
+The SQLite database is a *derived* projection only; `michaku rebuild`
 regenerates it from the JSONL at any time. If they disagree, the JSONL wins.
 
 ## 2. Event vocabulary (13 types)
@@ -95,7 +95,7 @@ actor.registered / actor.heartbeat ──► actor becomes tracked, last-seen up
 tracked actor's last-seen older than threshold ──► finding: actor.silent
 ```
 In particular, the checker's own `finding.*` events (actor
-`opsledger:check`) and actors that only declare schedules, execute runs,
+`michaku:check`) and actors that only declare schedules, execute runs,
 or request approvals are untracked and must not raise `actor.silent`.
 
 ## 4. Detection rules (fixed 5 types)
@@ -123,9 +123,9 @@ timestamps without an allowance for clock skew and ingestion delay.
      to monitor itself.
    - Recording completes through exactly three paths, all on the
      environment/operator side:
-     1. **Wrapper** — the environment wraps jobs (`opsledger run -- …`);
+     1. **Wrapper** — the environment wraps jobs (`michaku run -- …`);
      2. **Follow** — the environment reads logs the observed systems
-        already produce (`opsledger follow`);
+        already produce (`michaku follow`);
      3. **Operator emit** — the operator or operator-side scripts issue
         `emit` and its sugar commands. Emit is *not* something embedded
         into the observed agent.
@@ -153,7 +153,7 @@ timestamps without an allowance for clock skew and ingestion delay.
    to destinations the operator explicitly configured.
 5. **Data is not closed.** The JSONL source of truth is grep/jq-readable,
    digest is available as JSON, and notifications are plain webhooks, so
-   leaving or combining opsledger with other tools stays cheap.
+   leaving or combining michaku with other tools stays cheap.
 
 ## 6. Non-goals (v0.1)
 

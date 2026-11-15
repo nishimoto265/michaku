@@ -14,19 +14,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/config"
-	"github.com/nishimoto265/opsledger/internal/detect"
-	"github.com/nishimoto265/opsledger/internal/digest"
-	"github.com/nishimoto265/opsledger/internal/followx"
-	"github.com/nishimoto265/opsledger/internal/ledger"
-	"github.com/nishimoto265/opsledger/internal/notify"
-	"github.com/nishimoto265/opsledger/internal/store"
+	"github.com/nishimoto265/michaku/internal/config"
+	"github.com/nishimoto265/michaku/internal/detect"
+	"github.com/nishimoto265/michaku/internal/digest"
+	"github.com/nishimoto265/michaku/internal/followx"
+	"github.com/nishimoto265/michaku/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/notify"
+	"github.com/nishimoto265/michaku/internal/store"
 )
 
 func main() { os.Exit(runMain(os.Args[1:])) }
 
 func runMain(args []string) int {
-	cfgPath := "opsledger.toml"
+	cfgPath := "michaku.toml"
 	// extract --config / -config anywhere before subcommand
 	var rest []string
 	for i := 0; i < len(args); i++ {
@@ -94,8 +94,8 @@ func runMain(args []string) int {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, `opsledger — append-only operations ledger (observe and report, never act)
-Usage: opsledger [--config opsledger.toml] <command> [flags]
+	fmt.Fprintln(os.Stderr, `michaku — append-only operations ledger (observe and report, never act)
+Usage: michaku [--config michaku.toml] <command> [flags]
 Commands: init, emit, heartbeat, delegate, report, approve-request, approve-resolve,
           run, start, finish, follow, import, check, digest, status, rebuild`)
 }
@@ -104,7 +104,7 @@ func warnf(format string, a ...any) { fmt.Fprintf(os.Stderr, format+"\n", a...) 
 
 func mustAppend(cfg *config.Config, e ledger.Event) int {
 	if err := ledger.Append(cfg.LedgerPath, e); err != nil {
-		warnf("opsledger: failed to record: %v", err)
+		warnf("michaku: failed to record: %v", err)
 		return 1
 	}
 	fmt.Println(e.ID)
@@ -138,7 +138,7 @@ func projectState(cfg *config.Config) (*store.State, []ledger.Event, error) {
 // --- init ---
 func cmdInit(args []string) int {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
-	path := fs.String("path", "opsledger.toml", "config path")
+	path := fs.String("path", "michaku.toml", "config path")
 	force := fs.Bool("force", false, "overwrite")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -323,10 +323,10 @@ func cmdRun(cfg *config.Config, args []string) int {
 			}
 		}
 		if need {
-			ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("schedule.declared", "opsledger:run", subject, corr, "wrap", map[string]any{"expr": *schedule, "every": *every, "grace": *grace}), warn)
+			ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("schedule.declared", "michaku:run", subject, corr, "wrap", map[string]any{"expr": *schedule, "every": *every, "grace": *grace}), warn)
 		}
 	}
-	ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.started", "opsledger:run", subject, corr, "wrap", map[string]any{"job": subject}), warn)
+	ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.started", "michaku:run", subject, corr, "wrap", map[string]any{"job": subject}), warn)
 
 	start := time.Now()
 	cmd := exec.Command(childArgs[0], childArgs[1:]...)
@@ -358,7 +358,7 @@ func cmdRun(cfg *config.Config, args []string) int {
 	if status == "failed" && tailBuf != nil {
 		data["output_tail"] = tailBuf.String()
 	}
-	ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.finished", "opsledger:run", subject, corr, "wrap", data), warn)
+	ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.finished", "michaku:run", subject, corr, "wrap", data), warn)
 	// TRANSPARENCY: return child's code regardless of any recording failure above.
 	return exitCode
 }
@@ -428,10 +428,10 @@ func cmdStartFinish(cfg *config.Config, args []string, isStart bool) int {
 	}
 	warn := func(s string) { fmt.Fprintln(os.Stderr, s) }
 	if isStart {
-		ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.started", "opsledger:ping", subject, corr, "ping", map[string]any{"job": subject}), warn)
+		ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.started", "michaku:ping", subject, corr, "ping", map[string]any{"job": subject}), warn)
 	} else {
 		st := *status
-		ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.finished", "opsledger:ping", subject, corr, "ping", map[string]any{"status": st, "exit_code": *exitCodeF, "job": subject}), warn)
+		ledger.AppendBestEffort(cfg.LedgerPath, ledger.NewEvent("run.finished", "michaku:ping", subject, corr, "ping", map[string]any{"status": st, "exit_code": *exitCodeF, "job": subject}), warn)
 	}
 	return 0
 }
@@ -551,24 +551,24 @@ func cmdCheck(cfg *config.Config, args []string) int {
 		if c.Severity == "critical" {
 			hasCritical = true
 		}
-		e := ledger.NewEvent("finding.raised", "opsledger:check", c.Subject, "", "check", map[string]any{"rule": c.Rule, "finding_key": c.Key, "severity": c.Severity, "detail": c.Detail})
+		e := ledger.NewEvent("finding.raised", "michaku:check", c.Subject, "", "check", map[string]any{"rule": c.Rule, "finding_key": c.Key, "severity": c.Severity, "detail": c.Detail})
 		e.TS = now
 		if err := ledger.Append(cfg.LedgerPath, e); err != nil {
 			warnf("check: failed to write finding: %v", err)
 			continue
 		}
 		fmt.Printf("RAISED [%s] %s %s — %s\n", c.Severity, c.Rule, c.Subject, c.Detail)
-		notify.SendAll(cfg.Notify, notify.Message{Title: "opsledger finding raised: " + c.Rule, Body: c.Detail + " (" + c.Subject + ")", Kind: "raised"})
+		notify.SendAll(cfg.Notify, notify.Message{Title: "michaku finding raised: " + c.Rule, Body: c.Detail + " (" + c.Subject + ")", Kind: "raised"})
 	}
 	for _, f := range resolved {
-		e := ledger.NewEvent("finding.resolved", "opsledger:check", f.Subject, "", "check", map[string]any{"rule": f.Rule, "finding_key": f.Key, "detail": "resolved"})
+		e := ledger.NewEvent("finding.resolved", "michaku:check", f.Subject, "", "check", map[string]any{"rule": f.Rule, "finding_key": f.Key, "detail": "resolved"})
 		e.TS = now
 		if err := ledger.Append(cfg.LedgerPath, e); err != nil {
 			warnf("check: failed to write resolved: %v", err)
 			continue
 		}
 		fmt.Printf("RESOLVED %s %s\n", f.Rule, f.Subject)
-		notify.SendAll(cfg.Notify, notify.Message{Title: "opsledger finding resolved: " + f.Rule, Body: f.Subject, Kind: "resolved"})
+		notify.SendAll(cfg.Notify, notify.Message{Title: "michaku finding resolved: " + f.Rule, Body: f.Subject, Kind: "resolved"})
 	}
 	// reminders for still-open findings (no new ledger event, notification only)
 	for _, f := range st.Findings {
@@ -581,7 +581,7 @@ func cmdCheck(cfg *config.Config, args []string) int {
 				}
 			}
 			if !justRaised {
-				notify.SendAll(cfg.Notify, notify.Message{Title: "opsledger reminder: " + f.Rule, Body: f.Detail + " (" + f.Subject + ")", Kind: "reminder"})
+				notify.SendAll(cfg.Notify, notify.Message{Title: "michaku reminder: " + f.Rule, Body: f.Detail + " (" + f.Subject + ")", Kind: "reminder"})
 			}
 		}
 	}

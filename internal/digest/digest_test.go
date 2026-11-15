@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/ledger"
-	"github.com/nishimoto265/opsledger/internal/store"
+	"github.com/nishimoto265/michaku/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/store"
 )
 
 func TestDigestMarkdownAndJSON(t *testing.T) {

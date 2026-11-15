@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/config"
-	"github.com/nishimoto265/opsledger/internal/ledger"
-	"github.com/nishimoto265/opsledger/internal/store"
+	"github.com/nishimoto265/michaku/internal/config"
+	"github.com/nishimoto265/michaku/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/store"
 )
 
 func ev(typ, actor, subj, corr string, ts time.Time, data map[string]any) ledger.Event {
@@ -144,7 +144,7 @@ func TestFindingEpisodeDedup(t *testing.T) {
 	}
 	st := store.Project([]ledger.Event{
 		ev("approval.requested", "a", "thing:1", "approval:1", now.Add(-25*time.Hour), map[string]any{"what": "x"}),
-		ev("finding.raised", "opsledger:check", "thing:1", "", now.Add(-time.Hour), map[string]any{"rule": "approval.pending_stale", "finding_key": "approval.pending_stale|thing:1|approval:1", "severity": "warn", "detail": "d"}),
+		ev("finding.raised", "michaku:check", "thing:1", "", now.Add(-time.Hour), map[string]any{"rule": "approval.pending_stale", "finding_key": "approval.pending_stale|thing:1|approval:1", "severity": "warn", "detail": "d"}),
 	})
 	cands := Evaluate(st, cfg, now)
 	raised, _, _ := Diff(st.Findings, cands)
@@ -176,7 +176,7 @@ func TestHeartbeatStaleUntrackedActorsDoNotFire(t *testing.T) {
 		ev("approval.requested", "agent:kuma-main", "approval:x", "appr:1", old, map[string]any{"what": "x"}),
 		ev("delegation.created", "agent:kuma-main", "task:1", "deleg:1", old, map[string]any{"task": "x"}),
 		ev("activity.seen", "agent:seen-only", "task:1", "deleg:1", old, map[string]any{"source": "log"}),
-		ev("finding.raised", "opsledger:check", "job:daily", "", old, map[string]any{"rule": "run.missing", "finding_key": "run.missing|job:daily|x", "severity": "warn"}),
+		ev("finding.raised", "michaku:check", "job:daily", "", old, map[string]any{"rule": "run.missing", "finding_key": "run.missing|job:daily|x", "severity": "warn"}),
 	})
 	if cands := Evaluate(st, cfg, now); hasRule(cands, "actor.silent") {
 		t.Fatalf("untracked actors must not raise actor.silent, got %v", cands)

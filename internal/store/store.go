@@ -8,7 +8,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/nishimoto265/opsledger/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/ledger"
 )
 
 // State is the in-memory projection derived from events. The SQLite store

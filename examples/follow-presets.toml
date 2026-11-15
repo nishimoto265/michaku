@@ -1,4 +1,4 @@
-# Follow presets (synthetic examples). Copy a [[follow]] block into opsledger.toml.
+# Follow presets (synthetic examples). Copy a [[follow]] block into michaku.toml.
 # follow is READ-ONLY: target logs are opened O_RDONLY, never modified.
 
 # Preset 1: JSON-lines application log

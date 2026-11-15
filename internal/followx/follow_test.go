@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nishimoto265/opsledger/internal/config"
-	"github.com/nishimoto265/opsledger/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/config"
+	"github.com/nishimoto265/michaku/internal/ledger"
 )
 
 func TestTransformJSONMappingAndExclude(t *testing.T) {

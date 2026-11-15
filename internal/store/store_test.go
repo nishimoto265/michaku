@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nishimoto265/opsledger/internal/ledger"
+	"github.com/nishimoto265/michaku/internal/ledger"
 )
 
 func sampleEvents() []ledger.Event {
@@ -77,7 +77,7 @@ func TestProjectionTrackedActorsOnly(t *testing.T) {
 		mk("actor.heartbeat", "agent:hb", "agent:hb", nil),
 		mk("run.finished", "agent:cron-runner", "job:x", map[string]any{"status": "ok"}),
 		mk("activity.seen", "agent:seen-only", "job:x", map[string]any{"source": "log"}),
-		mk("finding.raised", "opsledger:check", "job:x", map[string]any{"rule": "run.missing"}),
+		mk("finding.raised", "michaku:check", "job:x", map[string]any{"rule": "run.missing"}),
 	})
 	if len(st.Actors) != 2 || len(st.TrackedActors) != 2 {
 		t.Fatalf("expected exactly the registered+heartbeat actors tracked, got actors=%v tracked=%v", st.Actors, st.TrackedActors)
