@@ -173,8 +173,8 @@ func TestHeartbeatStaleUntrackedActorsDoNotFire(t *testing.T) {
 		ev("schedule.declared", "system:cron", "job:daily", "sched:1", old, map[string]any{"expr": "0 9 * * *", "grace": "5m"}),
 		ev("run.started", "agent:cron-runner", "job:daily", "run:1", old, map[string]any{"job": "job:daily"}),
 		ev("run.finished", "agent:cron-runner", "job:daily", "run:1", old.Add(time.Minute), map[string]any{"status": "ok"}),
-		ev("approval.requested", "agent:kuma-main", "approval:x", "appr:1", old, map[string]any{"what": "x"}),
-		ev("delegation.created", "agent:kuma-main", "task:1", "deleg:1", old, map[string]any{"task": "x"}),
+		ev("approval.requested", "agent:coordinator", "approval:x", "appr:1", old, map[string]any{"what": "x"}),
+		ev("delegation.created", "agent:coordinator", "task:1", "deleg:1", old, map[string]any{"task": "x"}),
 		ev("activity.seen", "agent:seen-only", "task:1", "deleg:1", old, map[string]any{"source": "log"}),
 		ev("finding.raised", "michaku:check", "job:daily", "", old, map[string]any{"rule": "run.missing", "finding_key": "run.missing|job:daily|x", "severity": "warn"}),
 	})

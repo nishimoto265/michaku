@@ -10,7 +10,7 @@ The source of truth is an append-only JSONL file: one event per line.
 
 ```json
 {"v":1,"id":"<ULID>","ts":"2026-11-15T09:20:03+09:00","type":"run.finished",
- "actor":"agent:poikatsu-daily","subject":"job:poikatsu-daily-routine",
+ "actor":"agent:daily-agent","subject":"job:daily-routine",
  "corr":"run:<ULID>","src":"wrap","data":{...}}
 ```
 

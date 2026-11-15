@@ -42,16 +42,16 @@ func TestDigestMarkdownAndJSON(t *testing.T) {
 func TestDigestPartialRunFinished(t *testing.T) {
 	now := time.Now()
 	mk := func(subj string, data map[string]any) ledger.Event {
-		e := ledger.NewEvent("run.finished", "agent:poikatsu-daily", subj, "run:1", "test", data)
+		e := ledger.NewEvent("run.finished", "agent:daily-agent", subj, "run:1", "test", data)
 		e.TS = now
 		return e
 	}
-	sites := []string{"Toluna", "Ipsos iSay", "OpinionWorld", "Moppy gacha"}
+	sites := []string{"Site A", "Site B", "Site C", "Site D game"}
 	st := store.Project([]ledger.Event{
-		mk("job:poikatsu-daily-routine", map[string]any{
+		mk("job:daily-routine", map[string]any{
 			"status":           "ok",
 			"partial":          true,
-			"sites_incomplete": []any{"Toluna", "Ipsos iSay", "OpinionWorld", "Moppy gacha"},
+			"sites_incomplete": []any{"Site A", "Site B", "Site C", "Site D game"},
 			"note":             "some sites could not be completed",
 		}),
 		mk("job:other", map[string]any{"status": "ok"}),
@@ -66,7 +66,7 @@ func TestDigestPartialRunFinished(t *testing.T) {
 	}
 	var partialLine, normalLine string
 	for _, line := range rep.Completed {
-		if strings.Contains(line, "job:poikatsu-daily-routine") {
+		if strings.Contains(line, "job:daily-routine") {
 			partialLine = line
 		}
 		if strings.Contains(line, "job:other") {
@@ -120,7 +120,7 @@ func TestDigestPartialRunFinished(t *testing.T) {
 	}
 	var item *CompletedItem
 	for i := range decoded.CompletedItems {
-		if decoded.CompletedItems[i].Subject == "job:poikatsu-daily-routine" {
+		if decoded.CompletedItems[i].Subject == "job:daily-routine" {
 			item = &decoded.CompletedItems[i]
 		}
 		if decoded.CompletedItems[i].Subject == "job:other" && decoded.CompletedItems[i].Partial {
