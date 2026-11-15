@@ -1,0 +1,79 @@
+version: 2
+
+project_name: michaku
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: michaku
+    main: .
+    binary: michaku
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: michaku
+    ids:
+      - michaku
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: nishimoto265
+    name: michaku
+  name_template: "{{ .Tag }}"
+  header: |
+    michaku is an append-only operations ledger for autonomous agents and
+    cron jobs, with silence detection on top: the report that never arrived,
+    the approval nobody resolved, the job that quietly stopped running.
+
+    The observed side does nothing — recording and detection live entirely
+    on the environment side, and the tool never acts back on what it watches.
+  footer: |
+    ---
+
+    **Known limitations (v0.1)**
+
+    - Single machine, single operator. No multi-machine sync, no server mode.
+    - Detection is five fixed rule types with TOML parameters; there is no
+      custom rule language yet.
+    - Ingestion is wrapper / ping-pair / log-following / operator emit.
+      OpenTelemetry span ingestion and an HTTP ping endpoint are v0.2
+      candidates, not included here.
+    - A live shadow run (dogfooding against a real multi-project agent
+      operation, started 2026-11-15) is still in progress; its findings will
+      be written up separately and may drive v0.1.x fixes.
+
+    Install: see the README — one curl command, a release binary, or
+    `go install github.com/nishimoto265/michaku@latest`.

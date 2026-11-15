@@ -17,8 +17,10 @@ quietly stopped running.
 ## Install in 5 minutes: one binary + one cron line
 
 ```sh
-# 1. Put the single static binary somewhere on PATH (or `go install` it)
-go install github.com/nishimoto265/michaku@latest   # or download a release binary
+# 1. Install the single static binary (checksum-verified, into ~/.local/bin)
+curl -fsSL https://raw.githubusercontent.com/nishimoto265/michaku/main/install.sh | sh
+#    …or download a release archive from GitHub Releases, or:
+#    go install github.com/nishimoto265/michaku@latest
 
 # 2. Create a config (ledger paths, rules, notifications — all optional defaults)
 michaku init
@@ -58,6 +60,41 @@ configurable reminder interval. Notifications: generic webhook, Slack /
 Discord / ntfy formats, file append, and `check`'s exit code (non-zero on a
 new critical finding) so your existing cron mail can carry it.
 
+## What the digest looks like
+
+Generated from the synthetic ledger in [`examples/`](examples/) — a job that
+ran fine yesterday and not today, a delegation whose report never came, an
+agent that went quiet:
+
+```markdown
+# michaku digest
+
+## Summary
+
+- Events in ledger: 7 types tracked
+- Open findings: 3
+- Completed items in period: 1
+
+## Completed
+
+- job:daily-report run.finished status=ok at 2026-11-14T09:21:00+09:00
+
+## Stalled / Abnormal
+
+- [warn] actor.silent on agent:example-agent — last seen 2026-11-14T10:00:00+09:00 (threshold 1h0m0s)
+- [critical] delegation.unreported on task:write-summary — due 2026-11-14T12:00:00+09:00 unreported (task: write the daily summary)
+- [warn] run.missing on job:daily-report — expected run at 2026-11-14T09:20:00Z, none recorded (grace 10m0s)
+
+## Pending Approvals
+
+- (none)
+
+## Unreported Delegations & Silent Actors
+
+- task:write-summary created 2026-11-14T09:22:00+09:00, due 2026-11-14T12:00:00+09:00 — write the daily summary
+- agent:example-agent last seen 2026-11-14T10:00:00+09:00 (29h34m0s ago)
+```
+
 ## Recording paths (all environment/operator-side)
 
 1. **Wrapper / ping pair** — `run`, `start`, `finish` (above).
@@ -96,6 +133,11 @@ See [SPEC.md](SPEC.md) for the event envelope, the 13-type vocabulary, and
 the delegation / approval / finding lifecycle state machines.
 
 ## v0.1 scope and non-goals
+
+Status: michaku is in daily use by its author. Before this release it was
+validated by replaying real operational incidents (all detected, no false
+positives); a live shadow run against a real multi-project agent operation
+(started 2026-11-15) is still in progress and may drive v0.1.x fixes.
 
 In scope: single machine, single operator; emit + wrapper/ping + follow
 ingestion; the 5 detection rules; Markdown/JSON digest; webhook/file/exit-code
