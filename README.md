@@ -134,10 +134,11 @@ the delegation / approval / finding lifecycle state machines.
 
 ## v0.1 scope and non-goals
 
-Status: michaku is in daily use by its author. Before this release it was
+Status: michaku is in daily use by its author. Before v0.1.0 it was
 validated by replaying real operational incidents (all detected, no false
-positives); a live shadow run against a real multi-project agent operation
-(started 2026-11-15) is still in progress and may drive v0.1.x fixes.
+positives). A live shadow run against a real multi-project agent operation
+(2026-11-15 to 2026-11-18) produced the v0.1.1 hang fix and may drive
+further 0.1.x work.
 
 In scope: single machine, single operator; emit + wrapper/ping + follow
 ingestion; the 5 detection rules; Markdown/JSON digest; webhook/file/exit-code

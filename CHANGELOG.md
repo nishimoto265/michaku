@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.1 — 2026-11-19
+
+### Fixed
+
+- `store.Rebuild` now wraps all DELETE/INSERT statements in a single
+  transaction. Previously each event was its own autocommit (one journal
+  fsync per event), so `check` / `digest` / `status` appeared to hang once
+  a ledger grew past ~10k events on storage with millisecond fsync
+  latency. A 12,000-event scale test (`TestRebuildScale`) guards the fix.
+
+### Notes
+
+- The live shadow run that started 2026-11-15 ended on 2026-11-18 when
+  the original environment disappeared. The hang above was found there.
+  Remaining detection-quality work (open-run reconciliation, digest
+  dedup, and similar) is tracked for later 0.1.x releases and is not
+  included here.
+
 ## v0.1.0 — 2026-11-15
 
 First public release.

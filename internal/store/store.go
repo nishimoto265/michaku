@@ -221,9 +221,21 @@ CREATE TABLE IF NOT EXISTS job_last_run(subject TEXT PRIMARY KEY, last_run TEXT,
 func (s *Store) Close() error { return s.DB.Close() }
 
 // Rebuild wipes derived tables and replays all events.
+//
+// All statements run in a single transaction. Issuing each INSERT as its
+// own autocommit transaction costs one journal commit (fsync) per event,
+// which made Rebuild take minutes once the ledger grew past ~10k events
+// on storage with millisecond fsync latency (check appeared to hang).
+// One commit bounds the fsync cost regardless of ledger size, and makes
+// the rebuild atomic instead of leaving a half-replayed store on error.
 func (s *Store) Rebuild(events []ledger.Event) (*State, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after a successful Commit
 	for _, t := range []string{"events", "actors", "open_delegations", "pending_approvals", "job_schedules", "open_findings", "open_runs", "job_last_run"} {
-		if _, err := s.DB.Exec("DELETE FROM " + t); err != nil {
+		if _, err := tx.Exec("DELETE FROM " + t); err != nil {
 			return nil, err
 		}
 	}
@@ -232,12 +244,12 @@ func (s *Store) Rebuild(events []ledger.Event) (*State, error) {
 		b, _ := json.Marshal(e.Data)
 		_ = b
 		raw := string(e.Data)
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO events(id,ts,type,actor,subject,corr,src,data) VALUES(?,?,?,?,?,?,?,?)`, e.ID, e.TS.Format(time.RFC3339Nano), e.Type, e.Actor, e.Subject, e.Corr, e.Src, raw); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO events(id,ts,type,actor,subject,corr,src,data) VALUES(?,?,?,?,?,?,?,?)`, e.ID, e.TS.Format(time.RFC3339Nano), e.Type, e.Actor, e.Subject, e.Corr, e.Src, raw); err != nil {
 			return nil, fmt.Errorf("insert event %s: %w", e.ID, err)
 		}
 	}
 	for a, t := range st.Actors {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO actors(actor,last_seen,kind) VALUES(?,?,?)`, a, t.Format(time.RFC3339Nano), st.ActorKind[a]); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO actors(actor,last_seen,kind) VALUES(?,?,?)`, a, t.Format(time.RFC3339Nano), st.ActorKind[a]); err != nil {
 			return nil, err
 		}
 	}
@@ -246,34 +258,37 @@ func (s *Store) Rebuild(events []ledger.Event) (*State, error) {
 		if d.Due != nil {
 			due = d.Due.Format(time.RFC3339Nano)
 		}
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO open_delegations(key,subject,actor,created,due,task) VALUES(?,?,?,?,?,?)`, k, d.Subject, d.Actor, d.Created.Format(time.RFC3339Nano), due, d.Task); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO open_delegations(key,subject,actor,created,due,task) VALUES(?,?,?,?,?,?)`, k, d.Subject, d.Actor, d.Created.Format(time.RFC3339Nano), due, d.Task); err != nil {
 			return nil, err
 		}
 	}
 	for k, a := range st.Approvals {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO pending_approvals(key,subject,actor,requested,what) VALUES(?,?,?,?,?)`, k, a.Subject, a.Actor, a.Requested.Format(time.RFC3339Nano), a.What); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO pending_approvals(key,subject,actor,requested,what) VALUES(?,?,?,?,?)`, k, a.Subject, a.Actor, a.Requested.Format(time.RFC3339Nano), a.What); err != nil {
 			return nil, err
 		}
 	}
 	for subj, sc := range st.Schedules {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO job_schedules(subject,expr,every,grace,declared) VALUES(?,?,?,?,?)`, subj, sc.Expr, sc.Every, sc.Grace.String(), sc.Declared.Format(time.RFC3339Nano)); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO job_schedules(subject,expr,every,grace,declared) VALUES(?,?,?,?,?)`, subj, sc.Expr, sc.Every, sc.Grace.String(), sc.Declared.Format(time.RFC3339Nano)); err != nil {
 			return nil, err
 		}
 	}
 	for k, f := range st.Findings {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO open_findings(key,rule,subject,severity,raised,detail) VALUES(?,?,?,?,?,?)`, k, f.Rule, f.Subject, f.Severity, f.Raised.Format(time.RFC3339Nano), f.Detail); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO open_findings(key,rule,subject,severity,raised,detail) VALUES(?,?,?,?,?,?)`, k, f.Rule, f.Subject, f.Severity, f.Raised.Format(time.RFC3339Nano), f.Detail); err != nil {
 			return nil, err
 		}
 	}
 	for k, r := range st.OpenRuns {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO open_runs(key,subject,started) VALUES(?,?,?)`, k, r.Subject, r.Started.Format(time.RFC3339Nano)); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO open_runs(key,subject,started) VALUES(?,?,?)`, k, r.Subject, r.Started.Format(time.RFC3339Nano)); err != nil {
 			return nil, err
 		}
 	}
 	for subj, fr := range st.LastFinished {
-		if _, err := s.DB.Exec(`INSERT OR REPLACE INTO job_last_run(subject,last_run,last_status) VALUES(?,?,?)`, subj, fr.TS.Format(time.RFC3339Nano), fr.Status); err != nil {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO job_last_run(subject,last_run,last_status) VALUES(?,?,?)`, subj, fr.TS.Format(time.RFC3339Nano), fr.Status); err != nil {
 			return nil, err
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 	return st, nil
 }

@@ -68,9 +68,9 @@ release:
     - Ingestion is wrapper / ping-pair / log-following / operator emit.
       OpenTelemetry span ingestion and an HTTP ping endpoint are v0.2
       candidates, not included here.
-    - A live shadow run (dogfooding against a real multi-project agent
-      operation, started 2026-11-15) is still in progress; its findings will
-      be written up separately and may drive v0.1.x fixes.
+    - A live shadow run (2026-11-15 to 2026-11-18) produced the v0.1.1
+      hang fix; remaining detection-quality findings are tracked for
+      later 0.1.x releases.
 
     Install: see the README — one curl command, a release binary, or
     `go install github.com/nishimoto265/michaku@latest`.
